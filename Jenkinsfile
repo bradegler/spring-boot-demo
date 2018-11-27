@@ -8,12 +8,12 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        sh 'gradlew build'
+        sh './gradlew build'
       }
     }
     stage('Tag Image') {
       steps {
-        sh 'gradlew dockerTag'
+        sh './gradlew dockerTag'
       }
     }
     stage('Push Image') {
