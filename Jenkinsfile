@@ -8,7 +8,19 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        sh gradlew build
+        sh 'gradlew build'
+      }
+    }
+    stage('Tag Image') {
+      steps {
+        sh 'gradlew dockerTag'
+      }
+    }
+    stage('Push Image') {
+      steps {
+        sh "sudo docker login -u ${OCIR_ACCESS_USER} -p ${OCIR_ACCESS_KEY} ${OCIR_REGISTRY}"
+        sh "docker push iad.ocir.io/pickatto/demo"
+
       }
     }
   }
