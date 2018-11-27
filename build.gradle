@@ -1,0 +1,84 @@
+buildscript {
+	ext {
+		springBootVersion = '2.1.0.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+		maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath('org.ajoberstar:grgit:1.7.1')
+		classpath("gradle.plugin.com.palantir.gradle.docker:gradle-docker:0.20.1")
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'com.palantir.docker'
+
+defaultTasks 'clean', 'build'
+group = 'com.oracle'
+version = '0.0.2'
+sourceCompatibility = 1.8
+
+ext {
+	git = org.ajoberstar.grgit.Grgit.open(file('.'))
+    dockerImageName = project.name
+    dockerRegistryName = "iad.ocir.io/pickatto"
+	fullVersion = "${version}-${git.head().abbreviatedId}"
+    revision = git.head().id
+    sharedManifest = manifest {
+        attributes('Implementation-Title'   : project.name,
+                   'Implementation-Version' : fullVersion,
+                   'Implementation-Revision' : revision,
+                   'Implementation-Vendor'  : 'BradEgler',
+                   'Implementation-BuildDate' : new Date())
+    }
+}
+
+repositories {
+	mavenCentral()
+}
+
+
+dependencies {
+	implementation('org.springframework.boot:spring-boot-starter-security')
+	implementation('org.springframework.boot:spring-boot-starter-web')
+	runtimeOnly('org.springframework.boot:spring-boot-devtools')
+	testImplementation('org.springframework.boot:spring-boot-starter-test')
+	testImplementation('org.springframework.security:spring-security-test')
+}
+
+
+task updateVersion(type: Copy) {
+    from('gradle') {
+        include 'version.json'
+        expand(
+                buildDate: new Date(),
+                revision : revision,
+                version  : fullVersion,
+                projectName: project.name)
+    }
+    into("${buildDir}/resources/main")
+}
+
+classes.dependsOn updateVersion
+
+jar {
+	baseName = project.name
+    manifest {
+        from sharedManifest
+    }
+}
+
+docker {
+    name "${dockerRegistryName}/${dockerImageName}"
+    tags 'latest',"${version}"
+    files jar.outputs
+    dockerfile file("src/main/docker/Dockerfile")
+    noCache true
+}
