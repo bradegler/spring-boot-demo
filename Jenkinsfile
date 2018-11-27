@@ -13,7 +13,7 @@ pipeline {
     }
     stage('Tag Image') {
       steps {
-        sh './gradlew dockerTag'
+        sh 'sudo ./gradlew dockerTag'
       }
     }
     stage('Push Image') {
